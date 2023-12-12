@@ -1814,6 +1814,11 @@ static int set_sdp_current(struct smb_charger *chg, int icl_ua)
 	u8 icl_options;
 	const struct apsd_result *apsd_result = smblib_get_apsd_result(chg);
 
+	if (icl_ua == USBIN_500MA)
+	{
+		icl_ua = USBIN_900MA;
+	}
+
 	/* power source is SDP */
 	switch (icl_ua) {
 	case USBIN_100MA:
@@ -5871,9 +5876,12 @@ static int smblib_handle_usb_current(struct smb_charger *chg,
 				&& (usb_current == SUSPEND_CURRENT_UA))
 		is_float = true;
 
-	if ((usb_current > 0 && usb_current < USBIN_500MA)
-			|| (usb_current == USBIN_900MA))
-		usb_current = USBIN_500MA;
+	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB) {
+		if (usb_current > 0 && usb_current < USBIN_500MA)
+			usb_current = USBIN_500MA;
+		else if (usb_current >= USBIN_500MA && usb_current < USBIN_900MA)
+			usb_current = USBIN_900MA;
+	}
 
 	if (chg->real_charger_type == POWER_SUPPLY_TYPE_USB_FLOAT) {
 		if (usb_current == -ETIMEDOUT

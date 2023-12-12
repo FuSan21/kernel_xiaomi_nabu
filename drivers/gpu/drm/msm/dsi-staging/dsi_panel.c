@@ -74,6 +74,28 @@
 #define XY_COORDINATE_NUM    2
 #define MAX_LUMINANCE_NUM    2
 
+bool is_normal_boot = false;
+EXPORT_SYMBOL(is_normal_boot);
+
+static int __init read_is_normal_boot(char *s)
+{
+    strtobool(s, &is_normal_boot);
+    return 1;
+}
+__setup("androidboot.force_normal_boot=", read_is_normal_boot);
+
+bool is_charger_boot = false;
+EXPORT_SYMBOL(is_charger_boot);
+
+static int __init read_boot_mode(char *s)
+{
+    if (strcmp(s, "charger") == 0) {
+        is_charger_boot = true;
+    }
+    return 1;
+}
+__setup("androidboot.mode=", read_boot_mode);
+
 static struct dsi_panel *g_panel;
 
 int dsi_display_read_panel(struct dsi_panel *panel, struct dsi_read_config *read_config);
@@ -1078,6 +1100,11 @@ static int dsi_panel_parse_timing(struct dsi_mode_info *mode,
 	rc = utils->read_u32(utils->data,
 				"qcom,mdss-dsi-panel-framerate",
 				&mode->refresh_rate);
+                
+    if (!is_normal_boot || is_charger_boot) {
+		mode->refresh_rate = 104;
+    }
+                
 	if (rc) {
 		pr_err("failed to read qcom,mdss-dsi-panel-framerate, rc=%d\n",
 		       rc);
@@ -1629,6 +1656,11 @@ static int dsi_panel_parse_dfps_caps(struct dsi_panel *panel)
 	const char *name = panel->name;
 	const char *type;
 	u32 i;
+    
+    if (!is_normal_boot || is_charger_boot) {
+		dfps_caps->dfps_support = false;
+		return rc;
+    }
 
 	supported = utils->read_bool(utils->data,
 			"qcom,mdss-dsi-pan-enable-dynamic-fps");

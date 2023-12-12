@@ -1,4 +1,5 @@
 /* Copyright (c) 2002,2007-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -328,7 +329,7 @@ struct kgsl_device {
 	struct kgsl_pwrscale pwrscale;
 
 	int reset_counter; /* Track how many GPU core resets have occurred */
-	struct workqueue_struct *events_wq;
+	struct kthread_worker *events_worker;
 
 	struct device *busmondev; /* pseudo dev for GPU BW voting governor */
 
@@ -471,6 +472,7 @@ struct kgsl_process_private {
 	struct kgsl_pagetable *pagetable;
 	struct list_head list;
 	struct kobject kobj;
+	struct kobject kobj_memtype;
 	struct dentry *debug_root;
 	struct {
 		atomic64_t cur;
@@ -482,6 +484,10 @@ struct kgsl_process_private {
 	int fd_count;
 	atomic_t ctxt_count;
 	spinlock_t ctxt_count_lock;
+	/**
+	 * @private_mutex: Mutex lock to protect kgsl_process_private
+	 */
+	struct mutex private_mutex;
 };
 
 /**
@@ -761,11 +767,8 @@ bool kgsl_event_pending(struct kgsl_device *device,
 		kgsl_event_func func, void *priv);
 int kgsl_add_event(struct kgsl_device *device, struct kgsl_event_group *group,
 		unsigned int timestamp, kgsl_event_func func, void *priv);
-int kgsl_add_low_prio_event(struct kgsl_device *device,
-		struct kgsl_event_group *group, unsigned int timestamp,
-		kgsl_event_func func, void *priv);
 void kgsl_process_event_group(struct kgsl_device *device,
-		struct kgsl_event_group *group);
+	struct kgsl_event_group *group);
 void kgsl_flush_event_group(struct kgsl_device *device,
 		struct kgsl_event_group *group);
 void kgsl_process_event_groups(struct kgsl_device *device);
